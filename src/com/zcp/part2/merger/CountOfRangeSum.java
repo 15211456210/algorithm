@@ -99,10 +99,11 @@ public class CountOfRangeSum {
             return -1;
         }
         int count = 0;
+
         for (int i = 0; i < arr.length; i++) {
-            int sum = 0;
+            long sum = 0;
             for (int j = i; j < arr.length; j++) {
-                sum += arr[j];
+                sum += Long.valueOf(arr[j]);
                 count += sum >= lower && sum <= upper ? 1 : 0;
             }
         }
