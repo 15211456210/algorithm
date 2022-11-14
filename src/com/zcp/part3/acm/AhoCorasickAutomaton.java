@@ -13,122 +13,121 @@ import java.util.*;
 public class AhoCorasickAutomaton {
 
 
-    Node root;
+    // 前缀树的节点
+    public static class Node {
+        // 如果一个node，end为空，不是结尾
+        // 如果end不为空，表示这个点是某个字符串的结尾，end的值就是这个字符串
+        public String end;
+        // 只有在上面的end变量不为空的时候，endUse才有意义
+        // 表示，这个字符串之前有没有加入过答案
+        public boolean endUse;
+        public Node fail;
+        public Node[] nexts;
 
-    /**
-     * 字典树节点类
-     */
-    public class Node {
-        String seq;
-        Node[] nexts;
-        Node fail;
-
-        boolean end;//是否是结束节点
-        boolean hasFind;
-
-        public Node(String sq) {
-            seq = sq;
+        public Node() {
+            endUse = false;
+            end = null;
+            fail = null;
             nexts = new Node[26];
         }
     }
 
-    public AhoCorasickAutomaton(String[] words) {
-        root = new Node("");
-        for (String word : words) {
-            addTrie(word);
-        }
-        build();
-    }
+    public static class ACAutomation {
+        private Node root;
 
-    /**
-     * 构建tire 每个节点的fail指针
-     */
-    private void build() {
-        //root节点fail指针指向空
-        root.fail = null;
-        //宽度优先遍历
-        Queue<Node> queue = new LinkedList<>();
-        queue.offer(root);
-        while (!queue.isEmpty()) {
-            Node curNode = queue.poll();
-            if (curNode == root) {
-                //如果是根节点，所有子节点fail指针指向root
-                for (Node next : curNode.nexts) {
-                    if (next != null) {
-                        next.fail = root;
-                    }
+        public ACAutomation() {
+            root = new Node();
+        }
+
+        public void insert(String s) {
+            char[] str = s.toCharArray();
+            Node cur = root;
+            int index = 0;
+            for (int i = 0; i < str.length; i++) {
+                index = str[i] - 'a';
+                if (cur.nexts[index] == null) {
+                    cur.nexts[index] = new Node();
                 }
-            } else {
-                //如果不是root节点
-                for (int i = 0; i < curNode.nexts.length; i++) {
-                    Node next = curNode.nexts[i];
-                    if (next != null) {
-                        next.fail = root;//先指向root，如果下面能匹配到更优的节点就覆盖这里的指向
-                        Node curFail = curNode.fail;
-                        while (curFail != null) {
-                            if (curFail.nexts[i] != null) {
-                                //匹配到了，直接将next节点的fail指针指向它
-                                next.fail = curFail.nexts[i];
+                cur = cur.nexts[index];
+            }
+            cur.end = s;
+        }
+
+        public void build() {
+            Queue<Node> queue = new LinkedList<>();
+            queue.add(root);
+            Node cur = null;
+            Node cfail = null;
+            while (!queue.isEmpty()) {
+                // 某个父亲，cur
+                cur = queue.poll();
+                for (int i = 0; i < 26; i++) { // 所有的路
+                    // cur -> 父亲  i号儿子，必须把i号儿子的fail指针设置好！
+                    if (cur.nexts[i] != null) { // 如果真的有i号儿子
+                        cur.nexts[i].fail = root;
+                        cfail = cur.fail;
+                        while (cfail != null) {
+                            if (cfail.nexts[i] != null) {
+                                cur.nexts[i].fail = cfail.nexts[i];
                                 break;
                             }
-                            //如果没有匹配到，继续向上跳
-                            curFail = curFail.fail;
+                            cfail = cfail.fail;
                         }
+                        queue.add(cur.nexts[i]);
                     }
                 }
             }
         }
 
-    }
-
-    /**
-     * 构建字典树
-     *
-     * @param word
-     */
-    private void addTrie(String word) {
-        char[] chars = word.toCharArray();
-        Node cur = root;
-        for (char c : chars) {
-            if (cur.nexts[c - 'a'] == null) {
-                cur.nexts[c - 'a'] = new Node(cur.seq + c);
+        // 大文章：content
+        public List<String> containWords(String content) {
+            char[] str = content.toCharArray();
+            Node cur = root;
+            Node follow = null;
+            int index = 0;
+            List<String> ans = new ArrayList<>();
+            for (int i = 0; i < str.length; i++) {
+                index = str[i] - 'a'; // 路
+                // 如果当前字符在这条路上没配出来，就随着fail方向走向下条路径
+                while (cur.nexts[index] == null && cur != root) {
+                    cur = cur.fail;
+                }
+                // 1) 现在来到的路径，是可以继续匹配的
+                // 2) 现在来到的节点，就是前缀树的根节点
+                cur = cur.nexts[index] != null ? cur.nexts[index] : root;
+                follow = cur;
+                while (follow != root) {
+                    if (follow.endUse) {
+                        break;
+                    }
+                    // 不同的需求，在这一段之间修改
+                    if (follow.end != null) {
+                        ans.add(follow.end);
+                        follow.endUse = true;
+                    }
+                    // 不同的需求，在这一段之间修改
+                    follow = follow.fail;
+                }
             }
-            cur = cur.nexts[c - 'a'];
+            return ans;
         }
-        cur.end = true;
-    }
 
-    /**
-     * 返回 context文本中匹配到的words
-     *
-     * @param context
-     * @return
-     */
-    public List<String> query(String context) {
-        char[] chars = context.toCharArray();
-        ArrayList<String> findWords = new ArrayList<>();
-        Node cur = root;
-        for (char c : chars) {
-            Node matchNode = cur;
-            while (matchNode != null && matchNode.nexts[c - 'a'] == null) {
-                matchNode = matchNode.fail;
-            }
-            //两种情况
-            cur = matchNode == null? root:matchNode.nexts[c - 'a'];
-            if(cur.end && !cur.hasFind){
-                cur.hasFind = true;
-                findWords.add(cur.seq);
-            }
-        }
-        return findWords;
     }
-
 
     public static void main(String[] args) {
-        AhoCorasickAutomaton ahoCorasickAutomaton = new AhoCorasickAutomaton(new String[]{"tx", "abc", "acd"});
-        List<String> list = ahoCorasickAutomaton.query("dhjakjkabcqdjatxxtadbna");
-        System.out.println(Arrays.toString(list.toArray(new String[0])));
+        ACAutomation ac = new ACAutomation();
+        ac.insert("dhe");
+        ac.insert("he");
+        ac.insert("abcdheks");
+        // 设置fail指针
+        ac.build();
+
+        List<String> contains = ac.containWords("abcdhekskdjfafhasldkflskdjhwqaeruv");
+        for (String word : contains) {
+            System.out.println(word);
+        }
     }
+
 
 
 }

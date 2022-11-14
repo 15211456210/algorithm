@@ -1,10 +1,10 @@
 package com.zcp.part4.day05;
 
+import javax.xml.bind.DatatypeConverter;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 
-import javax.xml.bind.DatatypeConverter;
 
 public class Hash {
 
