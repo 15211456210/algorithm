@@ -18,7 +18,6 @@ public class Demo {
     public static void main(String[] args) {
 
 
-
         String s = "dir\n\tsubdir1\n\tsubdir2\n\t\tfile.ext";
         System.out.println(Arrays.toString(s.split("\n")));
 
